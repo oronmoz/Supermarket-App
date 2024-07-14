@@ -1,3 +1,5 @@
+package Application.Models;
+
 public class ShoppingItem {
     private String barcode;
     private float price;

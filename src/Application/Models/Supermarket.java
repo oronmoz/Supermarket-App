@@ -1,3 +1,8 @@
+package Application.Models;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 import java.util.function.BiPredicate;
 
@@ -18,21 +23,14 @@ public class Supermarket {
         this.sortOpt = SortOption.NONE;
     }
 
-    public boolean initSuperMarket(String fileName, String customersFileName, boolean isCompressed) {
+    public boolean initSuperMarket(String fileName, String customersFileName) {
         this.customerArr = new ArrayList<>();
         this.productList = new GeneralList<>();
         this.sortOpt = SortOption.NONE;
 
-        if (isCompressed) {
-            if (loadSuperMarketFromCompressedFile(this, fileName, customersFileName)) {
-                System.out.println("Supermarket successfully loaded from compressed files");
-                return true;
-            }
-        } else {
-            if (SuperFile.loadSuperMarketFromFile(this, fileName, customersFileName)) {
-                System.out.println("Supermarket successfully loaded from files");
-                return true;
-            }
+        if (SuperFile.loadSuperMarketFromFile(this, fileName, customersFileName)) {
+            System.out.println("Application.Models.Supermarket successfully loaded from files");
+            return true;
         }
 
         Scanner scanner = new Scanner(System.in);
@@ -42,19 +40,44 @@ public class Supermarket {
         return this.location.initAddress();
     }
 
+    public void saveToFile(PrintWriter out) throws IOException {
+        out.println(name);
+        location.saveAddressToFile(out);
+        out.println(productList.size());
+        productList.forEach(product -> {
+            product.saveProductToFile(out);
+        });
+    }
+
+    public static Supermarket loadFromFile(BufferedReader in) throws IOException {
+        Supermarket market = new Supermarket();
+        market.name = in.readLine();
+        market.location = Address.loadAddressFromFile(in);
+        int productCount = Integer.parseInt(in.readLine());
+        for (int i = 0; i < productCount; i++) {
+            Product product = Product.loadProductFromFile(in);
+            market.productList.insert(product);
+        }
+        return market;
+    }
+
+    public void copyFrom(Supermarket other) {
+        this.name = other.name;
+        this.location = other.location;
+        this.productList = other.productList;
+        this.sortOpt = other.sortOpt;
+    }
+
     public static boolean saveSuperMarketToCompressedFile(String fileName, String customersFileName) {
         // Implementation
         return true;
     }
 
-    public static boolean loadSuperMarketFromCompressedFile(Supermarket market, String fileName, String customersFileName) {
-        // Implementation
-        return true;
-    }
+
 
     public void printSuperMarket() {
         System.out.printf("Super Market Name: %s\t", name);
-        System.out.print("Address: ");
+        System.out.print("Application.Models.Address: ");
         System.out.println(location);
         System.out.println();
         printAllProducts();
@@ -81,18 +104,12 @@ public class Supermarket {
         return productList.insert(prod);
     }
 
-    public boolean addCustomer() {
-        Customer cust = new Customer();
-        if (!cust.initCustomer()) {
-            return false;
+    public boolean addCustomer(Customer customer) {
+        if (!isCustomerInMarket(customer)) {
+            customerArr.add(customer);
+            return true;
         }
-        if (isCustomerInMarket(cust)) {
-            System.out.println("This customer is already in the market");
-            return false;
-        }
-        customerArr.add(cust);
-        sortOpt = SortOption.NONE;
-        return true;
+        return false;
     }
 
     private boolean isCustomerInMarket(Customer cust) {
@@ -121,7 +138,7 @@ public class Supermarket {
             return;
         }
         if (customer.getCart() == null) {
-            System.out.println("Customer cart is empty");
+            System.out.println("Application.Models.Customer cart is empty");
             return;
         }
         customer.getCart().printShoppingCart();
@@ -133,7 +150,7 @@ public class Supermarket {
             return false;
         }
         if (customer.getCart() == null) {
-            System.out.println("Customer cart is empty");
+            System.out.println("Application.Models.Customer cart is empty");
             return false;
         }
         customer.pay();
@@ -157,27 +174,16 @@ public class Supermarket {
         }
     }
 
-    public void sortCustomers() {
-        SortOption option = showSortMenu();
-        Comparator<Customer> comparator = null;
-
-        switch (option) {
-            case NAME:
-                comparator = Comparator.comparing(Customer::getName);
-                break;
-            case TIME:
-                comparator = Comparator.comparingInt(Customer::getShopTimes);
-                break;
-            case SPEND:
-                comparator = Comparator.comparingDouble(Customer::getTotalSpend);
-                break;
-        }
-
+    public void sortCustomers(SortOption option) {
+        Comparator<Customer> comparator = switch (option) {
+            case NAME -> Comparator.comparing(Customer::getName);
+            case TIME -> Comparator.comparingInt(Customer::getShopTimes);
+            case SPEND -> Comparator.comparingDouble(Customer::getTotalSpend);
+            default -> null;
+        };
         if (comparator != null) {
             customerArr.sort(comparator);
             sortOpt = option;
-        } else {
-            System.out.println("Error in sorting");
         }
     }
 
@@ -219,10 +225,10 @@ public class Supermarket {
 
         int index = Collections.binarySearch(customerArr, searchCustomer, getComparator(sortOpt));
         if (index >= 0) {
-            System.out.println("Customer found, ");
+            System.out.println("Application.Models.Customer found, ");
             customerArr.get(index).printCustomer();
         } else {
-            System.out.println("Customer was not found");
+            System.out.println("Application.Models.Customer was not found");
         }
     }
 
@@ -292,7 +298,7 @@ public class Supermarket {
         return findCustomerByName(name);
     }
 
-    private Customer findCustomerByName(String name) {
+    public Customer findCustomerByName(String name) {
         return customerArr.stream()
                 .filter(c -> c.getName().equals(name))
                 .findFirst()
@@ -322,9 +328,19 @@ public class Supermarket {
         return tempProd;
     }
 
-    private Product getProductByBarcode(String barcode) {
+    public Product getProductByBarcode(String barcode) {
         BiPredicate<Product, Product> comparator = (p, b) -> p.getBarcode().equals(b.getBarcode());
         return productList.find(new Product(barcode), comparator);
+    }
+
+    public List<Product> getProductsByType(Product.ProductType type) {
+        List<Product> result = new ArrayList<>();
+        productList.forEach(product -> {
+            if (product.getType() == type) {
+                result.add(product);
+            }
+        });
+        return result;
     }
 
     public void handleCustomerStillShoppingAtExit() {
@@ -370,6 +386,12 @@ public class Supermarket {
 
     public GeneralList<Product> getProductList() {
         return productList;
+    }
+
+    public List<Product> getAllProducts() {
+        List<Product> products = new ArrayList<>();
+        productList.forEach(products::add);
+        return products;
     }
 
     public int getNumOfProductsInList() {

@@ -1,3 +1,5 @@
+package Application.Models;
+
 import java.io.*;
 import java.util.Scanner;
 
@@ -19,7 +21,7 @@ public class Address {
 
     public boolean initAddress() {
         Scanner scanner = new Scanner(System.in);
-        String allData = "";
+        String allData;
         String[] elements = new String[0];
         boolean ok;
         String msg = String.format("Enter address data\nFormat: street%shouse number%scity\nstreet and city can have spaces\n",
@@ -27,38 +29,44 @@ public class Address {
 
         do {
             System.out.println(msg);
-            allData = scanner.nextLine();
+            allData = scanner.nextLine().trim();
             int countSep = countCharInString(allData, ELEMENT_SEP.charAt(0));
-            if (countSep > 2) {
-                System.out.println("Too many separators in address");
+            if (countSep != 2) {
+                System.out.println("Incorrect number of separators in address. Please use exactly two '#' separators.");
                 ok = false;
-            } else {
-                elements = allData.split(ELEMENT_SEP);
-                ok = checkElements(elements);
-                if (!ok) {
-                    System.out.println("!!!incorrect address format!!!");
-                }
+                continue;
+            }
+
+            elements = allData.split(ELEMENT_SEP);
+            ok = checkElements(elements);
+            if (!ok) {
+                System.out.println("Incorrect address format. Please try again.");
             }
         } while (!ok);
 
-        this.num = Integer.parseInt(elements[1]);
+        try {
+            this.num = Integer.parseInt(elements[1]);
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid house number. Please enter a valid integer.");
+            return false;
+        }
+
         this.street = fixAddressParam(elements[0]);
         this.city = fixAddressParam(elements[2]);
 
         return true;
     }
 
-    public boolean saveAddressToFile(DataOutputStream out) throws IOException {
-        out.writeInt(num);
-        writeStringToFile(street, out);
-        writeStringToFile(city, out);
-        return true;
+    public void saveAddressToFile(PrintWriter out) {
+        out.println(num);
+        out.println(street);
+        out.println(city);
     }
 
-    public static Address loadAddressFromFile(DataInputStream in) throws IOException {
-        int num = in.readInt();
-        String street = readStringFromFile(in);
-        String city = readStringFromFile(in);
+    public static Address loadAddressFromFile(BufferedReader in) throws IOException {
+        int num = Integer.parseInt(in.readLine());
+        String street = in.readLine();
+        String city = in.readLine();
         return new Address(num, street, city);
     }
 
@@ -93,18 +101,6 @@ public class Address {
 
     private String capitalize(String str) {
         return str.substring(0, 1).toUpperCase() + str.substring(1);
-    }
-
-    private void writeStringToFile(String str, DataOutputStream out) throws IOException {
-        out.writeInt(str.length());
-        out.writeBytes(str);
-    }
-
-    private static String readStringFromFile(DataInputStream in) throws IOException {
-        int length = in.readInt();
-        byte[] bytes = new byte[length];
-        in.readFully(bytes);
-        return new String(bytes);
     }
 
     @Override

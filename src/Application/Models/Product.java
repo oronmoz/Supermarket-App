@@ -1,3 +1,5 @@
+package Application.Models;
+
 import java.io.*;
 import java.util.Scanner;
 
@@ -45,6 +47,15 @@ public class Product {
         this.count = other.count;
     }
 
+    // New constructor
+    public Product(String name, String barcode, ProductType type, float price, int count) {
+        this.name = name;
+        this.barcode = barcode;
+        this.type = type;
+        this.price = price;
+        this.count = count;
+    }
+
     public void initProduct() {
         initProductNoBarcode();
         this.barcode = getBarcodeCode();
@@ -70,21 +81,21 @@ public class Product {
         System.out.printf("%-20s %5.2f %10d\n", type, price, count);
     }
 
-    public void saveProductToFile(DataOutputStream out) throws IOException {
-        out.writeUTF(name);
-        out.writeUTF(barcode);
-        out.writeInt(type.ordinal());
-        out.writeFloat(price);
-        out.writeInt(count);
+    public void saveProductToFile(PrintWriter out) {
+        out.println(name);
+        out.println(barcode);
+        out.println(type.ordinal());
+        out.println(price);
+        out.println(count);
     }
 
-    public static Product loadProductFromFile(DataInputStream in) throws IOException {
+    public static Product loadProductFromFile(BufferedReader in) throws IOException {
         Product product = new Product();
-        product.name = in.readUTF();
-        product.barcode = in.readUTF();
-        product.type = ProductType.values()[in.readInt()];
-        product.price = in.readFloat();
-        product.count = in.readInt();
+        product.name = in.readLine();
+        product.barcode = in.readLine();
+        product.type = ProductType.values()[Integer.parseInt(in.readLine())];
+        product.price = Float.parseFloat(in.readLine());
+        product.count = Integer.parseInt(in.readLine());
         return product;
     }
 
